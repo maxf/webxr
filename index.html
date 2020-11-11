@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css"/>
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.js"></script>
+    <script src="boids.js"></script>
     <script src="hotreload.js"></script>
   </head>
   <body>
@@ -67,12 +68,12 @@
 
      const nboxes = 200;
      const boxes = [];
-     for (let i=0; i<nboxes; i++) {
-       boxes[i] = createBox(scene, `box-${i}`, rnd(-10, 10), rnd(0, 10), rnd(-10, 10));
-     };
+//     for (let i=0; i<nboxes; i++) {
+//       boxes[i] = createBox(scene, `box-${i}`, rnd(-10, 10), rnd(0, 10), rnd(-10, 10));
+//     };
 
 
-
+/*
      const turn = i => {
        for (let j=0; j<nboxes; j++) {
          fx = boxes[j].getAttribute('data-fx');
@@ -85,8 +86,10 @@
        setTimeout(() => turn(i+.1), 10);
      };
      turn(1);
+*/
 
+      setup(10, 10, 10);
+     draw();
     </script>
-
   </body>
 </html>
