@@ -2,8 +2,7 @@
 
 // global variables: scene
 
-
-//=== p5js functions ===
+//=== vector functions ===
 const mag = v => Math.sqrt(v.x*v.x + v.y*v.y);
 const magSq = v => v.x*v.x + v.y*v.y;
 const createVector = (x, y) => { return { x, y }; };
@@ -24,10 +23,24 @@ const limit = (v, max) => {
   return createVector(x,y);
 };
 const heading = v => Math.atan2(v.y, v.x);
-const radians = degrees => degrees * Math.Pi / 180;
+const radians = degrees => degrees * Math.PI / 180;
 const normalize = v => limit(v, 1);
 
 //======================
+// util
+
+const paletteColour = i => {
+  const palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+  return palette[i%palette.length];
+};
+
+const randomColour = () => paletteColour(Math.round(Math.random()*1000));
+
+
+
+//======================
+
+
 
 let flock;
 let width, height;
@@ -41,7 +54,7 @@ function setup(width, height, numBoids) {
   flock = new Flock();
   // Add an initial set of boids into the system
   for (let i = 0; i < numBoids; i++) {
-    const b = new Boid(width / 2,height / 2, i);
+    const b = new Boid(width / 2,height / 2, 'boid-'+i);
     flock.addBoid(b);
   }
 }
@@ -84,23 +97,22 @@ Flock.prototype.addBoid = function(b) {
 // Boid class
 // Methods for Separation, Cohesion, Alignment added
 
-function Boid(x, y, i) {
+function Boid(x, y, id) {
   this.acceleration = createVector(0, 0);
-  this.velocity = createVector(random(-1, 1), random(-1, 1));
+  this.velocity = createVector(random(-.05, .05), random(-.05, .05));
   this.position = createVector(x, y);
   this.r = 3.0;
   this.maxspeed = 3;    // Maximum speed
-  this.maxforce = 0.05; // Maximum steering force
-
+  this.maxforce = 0.5; // Maximum steering force (orig: 0.03)
+  this.id = id;
   // create DOM node
-  this.id = `boid-${i}`;
   this.domNode = document.createElement('a-box');
   this.domNode.setAttribute('position', `${this.position.x} ${this.position.y} 0`);
-  this.domNode.setAttribute('color', '#4cd93c');
+  this.domNode.setAttribute('height', 0.1);
+  this.domNode.setAttribute('width', 0.1);
+  this.domNode.setAttribute('depth', 0.1);
+  this.domNode.setAttribute('color', randomColour()); //'#4cd93c');
   this.domNode.setAttribute('id', this.id);
-  if (this.id === 'boid-2') {
-    console.log(this.domNode, this.position.x, this.position.y);
-  }
   scene.appendChild(this.domNode);
 }
 
@@ -138,6 +150,7 @@ Boid.prototype.update = function() {
   // Limit speed
   this.velocity = limit(this.velocity, this.maxspeed);
   this.position = add(this.position, this.velocity);
+
   // Reset accelertion to 0 each cycle
   this.acceleration = mult(this.acceleration, 0);
 }
@@ -151,8 +164,8 @@ Boid.prototype.seek = function(target) {
   desired = mult(desired, this.maxspeed);
   // Steering = Desired minus Velocity
   let steer = sub(desired,this.velocity);
-  steer = limit(steer, this.maxforce);  // Limit to maximum steering force
-  return steer;
+  let steer2 = limit(steer, this.maxforce);  // Limit to maximum steering force
+  return steer2;
 }
 
 Boid.prototype.render = function() {
@@ -171,14 +184,10 @@ Boid.prototype.render = function() {
   endShape(CLOSE);
   pop();
 */
-  if (this.id==='boid-2') {
-    console.log(this.id, this.position.x, this.position.y);
-  }
   const node = document.getElementById(this.id);
   const theta = heading(this.velocity) + radians(90);
   node.setAttribute('position', `${this.position.x} ${this.position.y} 0`);
-//  node.setAttribute('position', `5.1 5.1 0`);
-  node.setAttribute('rotation', `0 0 ${theta}`);
+  node.setAttribute('rotation', `0 ${theta*360} 0`);
 }
 
 // Wraparound
@@ -238,12 +247,12 @@ Boid.prototype.align = function(boids) {
     }
   }
   if (count > 0) {
-    sum = div(sum, count);
-    sum = normalize(sum);
-    sum = mult(sum, this.maxspeed);
-    let steer = sub(sum, this.velocity);
-    steer = limit(steer, this.maxforce);
-    return steer;
+    let sum2 = div(sum, count);
+    let sum3 = normalize(sum2);
+    let sum4 = mult(sum3, this.maxspeed);
+    let steer = sub(sum4, this.velocity);
+    let steer2 = limit(steer, this.maxforce);
+    return steer2;
   } else {
     return createVector(0, 0);
   }

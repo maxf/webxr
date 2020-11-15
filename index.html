@@ -4,7 +4,6 @@
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no,user-scalable=no,maximum-scale=1">
     <title>Examples • Island</title>
-    <link rel="stylesheet" href="style.css"/>
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.js"></script>
     <script src="boids.js"></script>
@@ -27,9 +26,7 @@
       <a-cylinder position="-1 3.75 3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
 
       <!-- Ocean -->
-<!--
       <a-ocean width="50" depth="50" density="40" opacity="1" position="0 0 0"></a-ocean>
--->
 
       <!-- Sky -->
       <a-sky color="#AADDF0"></a-sky>
@@ -64,6 +61,10 @@
        return newBox;
      }
 
+//     box=createBox(scene, `box-22`, 5,8,0);
+//     b=document.getElementById('box-22');
+//     b.setAttribute('position', '5 5 0');
+
 //     box=createBox(scene, `box-22`, 1, 2, 4);
 
      const message = content => text.setAttribute('value', content);
@@ -92,12 +93,14 @@
         turn(1);
       */
 
-     setup(10, 10, 10);
+     setup(5, 5, 200);
+//     draw();
+
 
      const tick = i => {
        draw();
        message(`tick: ${i}`);
-       setTimeout(() => tick(i+1), 1000);
+       setTimeout(() => tick(i+1), 10);
      };
 
      tick(1);
