@@ -3,26 +3,28 @@
 // global variables: scene
 
 //=== vector functions ===
-const mag = v => Math.sqrt(v.x*v.x + v.y*v.y);
-const magSq = v => v.x*v.x + v.y*v.y;
-const createVector = (x, y) => { return { x, y }; };
+const mag = v => Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+const magSq = v => v.x*v.x + v.y*v.y + v.z*v.z;
+const createVector = (x, y, z) => { return { x, y, z }; };
 const random = (min, max) => Math.random() * (max-min) + min;
-const dist = (p1, p2) => Math.sqrt((p2.x-p1.x)*(p2.x-p1.x) + (p2.y-p1.y)*(p2.y-p1.y));
-const sub = (v1, v2) => createVector(v1.x - v2.x, v1.y - v2.y);
-const mult = (v, a) => createVector(v.x * a, v.y * a);
-const div = (v, a) => createVector(v.x / a, v.y / a);
-const add = (v1, v2) => createVector(v1.x + v2.x, v1.y + v2.y);
+const dist = (p1, p2) => Math.sqrt((p2.x-p1.x)*(p2.x-p1.x) + (p2.y-p1.y)*(p2.y-p1.y) + (p2.z-p1.z)*(p2.z-p1.z));
+const sub = (v1, v2) => createVector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+const mult = (v, a) => createVector(v.x * a, v.y * a, v.z*a);
+const div = (v, a) => createVector(v.x / a, v.y / a, v.z/a);
+const add = (v1, v2) => createVector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
 const limit = (v, max) => {
   const mSq = magSq(v);
   let x = v.x;
   let y = v.y;
+  let z = v.z;
   if (mSq > max * max) {
     x /= Math.sqrt(mSq) * max;
     y /= Math.sqrt(mSq) * max;
+    z /= Math.sqrt(mSq) * max;
   }
-  return createVector(x,y);
+  return createVector(x,y,z);
 };
-const heading = v => Math.atan2(v.y, v.x);
+//const heading = v => Math.atan2(v.y, v.x);
 const radians = degrees => degrees * Math.PI / 180;
 const normalize = v => limit(v, 1);
 
@@ -43,18 +45,20 @@ const randomColour = () => paletteColour(Math.round(Math.random()*1000));
 
 
 let flock;
-let width, height;
+let width, height, depth;
 
-function setup(width, height, numBoids) {
-//  createCanvas(640, 360);
-//  createP("Drag the mouse to generate new boids.");
+function setup(w, h, d, numBoids) {
+  console.log(24, numBoids);
+  width=w;
+  height=h;
+  depth=d;
 
-  width = width;
-  height = height;
   flock = new Flock();
   // Add an initial set of boids into the system
   for (let i = 0; i < numBoids; i++) {
-    const b = new Boid(width / 2,height / 2, 'boid-'+i);
+//    const b = new Boid(0,height / 2, depth/2, 'boid-'+i);
+//    const b = new Boid(height / 2, depth/2, 0, 'boid-'+i);
+    const b = new Boid(width / 2,height / 2, depth / 2, 'boid-'+i);
     flock.addBoid(b);
   }
 }
@@ -97,20 +101,22 @@ Flock.prototype.addBoid = function(b) {
 // Boid class
 // Methods for Separation, Cohesion, Alignment added
 
-function Boid(x, y, id) {
-  this.acceleration = createVector(0, 0);
-  this.velocity = createVector(random(-.05, .05), random(-.05, .05));
-  this.position = createVector(x, y);
+function Boid(x, y, z, id) {
+  this.acceleration = createVector(0, 0, 0);
+//  this.velocity = createVector(0, random(-.01, .01), random(-.01, .01));
+//  this.velocity = createVector(random(-.01, .01), random(-.01, .01), 0);
+  this.velocity = createVector(random(-.01, .01), random(-.01, .01), random(-.01, .01));
+  this.position = createVector(x, y, z);
   this.r = 3.0;
   this.maxspeed = 3;    // Maximum speed
   this.maxforce = 0.5; // Maximum steering force (orig: 0.03)
   this.id = id;
   // create DOM node
-  this.domNode = document.createElement('a-box');
-  this.domNode.setAttribute('position', `${this.position.x} ${this.position.y} 0`);
+  this.domNode = document.createElement('a-cone');
+  this.domNode.setAttribute('position', `${this.position.x} ${this.position.y} ${this.position.z}`);
   this.domNode.setAttribute('height', 0.1);
-  this.domNode.setAttribute('width', 0.1);
-  this.domNode.setAttribute('depth', 0.1);
+  this.domNode.setAttribute('radius-bottom', 0.03);
+  this.domNode.setAttribute('radius-top', 0);
   this.domNode.setAttribute('color', randomColour()); //'#4cd93c');
   this.domNode.setAttribute('id', this.id);
   scene.appendChild(this.domNode);
@@ -134,10 +140,14 @@ Boid.prototype.flock = function(boids) {
   let ali = this.align(boids);      // Alignment
   let coh = this.cohesion(boids);   // Cohesion
   // Arbitrarily weight these forces
-  sep = mult(sep, 1.5);
-  ali = mult(ali, 1.0);
-  coh = mult(coh, 1.0);
+  sep = mult(sep, 0.01);
+  ali = mult(ali, 0.02);
+  coh = mult(coh, 0.01);
+  // sep = mult(sep, 1.5);
+  // ali = mult(ali, 1.0);
+  // coh = mult(coh, 1.0);
   // Add the force vectors to acceleration
+//  console.log(sep, ali, coh);
   this.applyForce(sep);
   this.applyForce(ali);
   this.applyForce(coh);
@@ -170,39 +180,43 @@ Boid.prototype.seek = function(target) {
 
 Boid.prototype.render = function() {
   // Draw a triangle rotated in the direction of velocity
-/*
-  let theta = heading(this.velocity) + radians(90);
-  fill(127);
-  stroke(200);
-  push();
-  translate(this.position.x, this.position.y);
-  rotate(theta);
-  beginShape();
-  vertex(0, -this.r * 2);
-  vertex(-this.r, this.r * 2);
-  vertex(this.r, this.r * 2);
-  endShape(CLOSE);
-  pop();
-*/
   const node = document.getElementById(this.id);
-  const theta = heading(this.velocity) + radians(90);
-  node.setAttribute('position', `${this.position.x} ${this.position.y} 0`);
-  node.setAttribute('rotation', `0 ${theta*360} 0`);
+  const [ vx, vy, vz ] = [ this.velocity.x, this.velocity.y, this.velocity.z ];
+  node.setAttribute('position', `${this.position.x} ${this.position.y} ${this.position.z}`);
+
+//  const thetaX = Math.atan2(vz, vy);
+//  const thetaZ = Math.atan2(vy, vx);
+
+  const thetaX = Math.atan2(vz, vy);
+  const thetaZ = -Math.atan2(vx, Math.sqrt(vy*vy + vz*vz));
+
+//  node.object3D.rotation.set(thetaX, 0, thetaZ);
+
+//  const eulerAngles = new THREE.Euler(thetaX, 0, thetaZ);
+//  node.object3D.rotation = eulerAngles;
+
+
+//  node.setAttribute('rotation', `${thetaX*180/Math.PI} 0 0`);
+//  node.setAttribute('rotation', `0 0 ${thetaZ*180/Math.PI - 90}`);
+  node.setAttribute('rotation', `${thetaX*180/Math.PI} 0 ${thetaZ*180/Math.PI}`);
+
 }
 
 // Wraparound
 Boid.prototype.borders = function() {
   if (this.position.x < -this.r)  this.position.x = width + this.r;
   if (this.position.y < -this.r)  this.position.y = height + this.r;
+  if (this.position.z < -this.r)  this.position.z = depth + this.r;
   if (this.position.x > width + this.r) this.position.x = -this.r;
   if (this.position.y > height + this.r) this.position.y = -this.r;
+  if (this.position.z > depth + this.r) this.position.z = -this.r;
 }
 
 // Separation
 // Method checks for nearby boids and steers away
 Boid.prototype.separate = function(boids) {
   let desiredseparation = 25.0;
-  let steer = createVector(0, 0);
+  let steer = createVector(0, 0, 0);
   let count = 0;
   // For every boid in the system, check if it's too close
   for (let i = 0; i < boids.length; i++) {
@@ -213,7 +227,7 @@ Boid.prototype.separate = function(boids) {
       let diff = sub(this.position, boids[i].position);
       diff = normalize(diff);
       diff = div(diff, d);        // Weight by distance
-      street = add(steer, diff);
+      steer = add(steer, diff);
       count++;            // Keep track of how many
     }
   }
@@ -227,7 +241,7 @@ Boid.prototype.separate = function(boids) {
     // Implement Reynolds: Steering = Desired - Velocity
     steer = normalize(steer);
     steer = mult(steer, this.maxspeed);
-    steer.sub(this.velocity);
+    steer = sub(steer, this.velocity);
     steer = limit(steer, this.maxforce);
   }
   return steer;
@@ -237,7 +251,7 @@ Boid.prototype.separate = function(boids) {
 // For every nearby boid in the system, calculate the average velocity
 Boid.prototype.align = function(boids) {
   let neighbordist = 50;
-  let sum = createVector(0,0);
+  let sum = createVector(0,0,0);
   let count = 0;
   for (let i = 0; i < boids.length; i++) {
     let d = dist(this.position,boids[i].position);
@@ -254,7 +268,7 @@ Boid.prototype.align = function(boids) {
     let steer2 = limit(steer, this.maxforce);
     return steer2;
   } else {
-    return createVector(0, 0);
+    return createVector(0,0,0);
   }
 }
 
@@ -262,7 +276,7 @@ Boid.prototype.align = function(boids) {
 // For the average location (i.e. center) of all nearby boids, calculate steering vector towards that location
 Boid.prototype.cohesion = function(boids) {
   let neighbordist = 50;
-  let sum = createVector(0, 0);   // Start with empty vector to accumulate all locations
+  let sum = createVector(0,0,0);   // Start with empty vector to accumulate all locations
   let count = 0;
   for (let i = 0; i < boids.length; i++) {
     let d = dist(this.position,boids[i].position);
@@ -275,6 +289,6 @@ Boid.prototype.cohesion = function(boids) {
     sum = div(sum, count);
     return this.seek(sum);  // Steer towards the location
   } else {
-    return createVector(0, 0);
+    return createVector(0, 0, 0);
   }
 }
