@@ -7,6 +7,7 @@
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.js"></script>
     <script src="boids.js"></script>
+    <script src="seedrandom.js"></script>
   </head>
   <body>
     <a-scene id="scene">
@@ -49,60 +50,15 @@
     </a-scene>
 
     <script>
-
+//     Math.seedrandom('hello');
 
      const rnd = (min, max) => Math.random()*(max-min) + min;
      const scene = document.getElementById('scene');
      const text = document.getElementById('text');
 
-     const createBox = (scene, id, x, y, z) => {
-       const newBox = document.createElement('a-box');
-       newBox.setAttribute('position', `${x} ${y} ${z}`);
-       newBox.setAttribute('rotation', '0 45 0');
-       newBox.setAttribute('color', '#4c3cd9');
-       newBox.setAttribute('id', id);
-       newBox.setAttribute('data-fx', rnd(0,5));
-       newBox.setAttribute('data-fy', rnd(0,5));
-       newBox.setAttribute('data-fz', rnd(0,5));
-       scene.appendChild(newBox);
-       return newBox;
-     }
-
-//     box=createBox(scene, `box-22`, 5,8,0);
-//     b=document.getElementById('box-22');
-//     b.setAttribute('position', '5 5 0');
-
-//     box=createBox(scene, `box-22`, 1, 2, 4);
-
      const message = content => text.setAttribute('value', content);
 
-
-
-     //   const nboxes = 200;
-     //     const boxes = [];
-     //     for (let i=0; i<nboxes; i++) {
-     //       boxes[i] = createBox(scene, `box-${i}`, rnd(-10, 10), rnd(0, 10), rnd(-10, 10));
-     //     };
-
-
-     /*
-        const turn = i => {
-        for (let j=0; j<nboxes; j++) {
-        fx = boxes[j].getAttribute('data-fx');
-        fy = boxes[j].getAttribute('data-fy');
-        fz = boxes[j].getAttribute('data-fz');
-        boxes[j].setAttribute('rotation', `${fx*i} ${fy*i} ${fz*i}`);
-
-        }
-        message(`time: ${Math.round(i)}`);
-        setTimeout(() => turn(i+.1), 10);
-        };
-        turn(1);
-      */
-
      setup(5, 5, 5, 60);
-     //     draw();
-
 
      const tick = i => {
        draw();
