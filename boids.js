@@ -2,32 +2,32 @@
 
 // global variables: scene
 
-//=== vector functions ===
-const mag = v => Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
-const magSq = v => v.x*v.x + v.y*v.y + v.z*v.z;
-const createVector = (x, y, z) => { return { x, y, z }; };
-const random = (min, max) => Math.random() * (max-min) + min;
-const dist = (p1, p2) => Math.sqrt((p2.x-p1.x)*(p2.x-p1.x) + (p2.y-p1.y)*(p2.y-p1.y) + (p2.z-p1.z)*(p2.z-p1.z));
-const sub = (v1, v2) => createVector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
-const mult = (v, a) => createVector(v.x * a, v.y * a, v.z*a);
-const div = (v, a) => createVector(v.x / a, v.y / a, v.z/a);
-const add = (v1, v2) => createVector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
-const limit = (v, max) => {
-  const mSq = magSq(v);
-  if (mSq > max * max) {
-    const f = Math.sqrt(mSq) * max;
-    return createVector(v.x/f, v.y/f, v.z/f);
-  } else {
-    return createVector(v.x,v.y,v.z);
-  }
-};
-//const heading = v => Math.atan2(v.y, v.x);
-const radians = degrees => degrees * Math.PI / 180;
-const degrees = radians => radians * 180 / Math.PI;
-const normalize = v => limit(v, 1);
 
 //======================
 // util
+
+const limit = (v, max) => {
+  const mSq = v.lengthSq();
+  if (mSq > max * max) {
+    const f = Math.sqrt(mSq) * max;
+    return new THREE.Vec3(v.x/f, v.y/f, v.z/f);
+  } else {
+    return new THREE.Vec3(v.x,v.y,v.z);
+  }
+};
+
+THREE.Vector3.prototype.limit = function(max) {
+  const mSq = this.lengthSq();
+  if (mSq > max * max) {
+    this.divideScalar(Math.sqrt(mSq) * max);
+  }
+  return this;
+};
+
+const radians = degrees => degrees * Math.PI / 180;
+const degrees = radians => radians * 180 / Math.PI;
+
+const random = (min, max) => Math.random() * (max-min) + min;
 
 const paletteColour = i => {
   const palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
@@ -35,7 +35,6 @@ const paletteColour = i => {
 };
 
 const randomColour = () => paletteColour(Math.round(Math.random()*1000));
-
 
 
 //======================
@@ -46,7 +45,6 @@ let flock;
 let width, height, depth;
 
 function setup(w, h, d, numBoids) {
-  console.log(24, numBoids);
   width=w;
   height=h;
   depth=d;
@@ -93,11 +91,11 @@ Flock.prototype.addBoid = function(b) {
 // Boid class
 
 function Boid(x, y, z, id) {
-  this.acceleration = createVector(0, 0, 0);
-  this.velocity = createVector(random(-.01, .01), random(-.01, .01), random(-.01, .01));
-  this.position = createVector(x, y, z);
+  this.acceleration = new THREE.Vector3(0, 0, 0);
+  this.velocity = new THREE.Vector3(random(-.01, .01), random(-.01, .01), random(-.01, .01));
+  this.position = new THREE.Vector3(x, y, z);
   this.r = 3.0;
-  this.maxspeed = 3;    // Maximum speed
+  this.maxspeed = 0.7;    // Maximum speed
   this.maxforce = 0.5; // Maximum steering force (orig: 0.03)
   this.id = id;
 
@@ -123,7 +121,7 @@ Boid.prototype.run = function(boids) {
 
 Boid.prototype.applyForce = function(force) {
   // We could add mass here if we want A = F / M
-  this.acceleration = add(this.acceleration, force);
+  this.acceleration.add(force);
 }
 
 
@@ -132,10 +130,13 @@ Boid.prototype.flock = function(boids) {
   let sep = this.separate(boids);   // Separation
   let ali = this.align(boids);      // Alignment
   let coh = this.cohesion(boids);   // Cohesion
+
+
+
   // Arbitrarily weight these forces
-  sep = mult(sep, 0.01);
-  ali = mult(ali, 0.02);
-  coh = mult(coh, 0.01);
+  sep.multiplyScalar(0.01);
+  ali.multiplyScalar(0.0002);
+  coh.multiplyScalar(0.0105);
 
   // Add the force vectors to acceleration
   this.applyForce(sep);
@@ -147,28 +148,27 @@ Boid.prototype.flock = function(boids) {
 // Method to update location
 Boid.prototype.update = function() {
   // Update velocity
-  this.velocity = add(this.velocity, this.acceleration);
+  this.velocity.add(this.acceleration);
   // Limit speed
-  this.velocity = limit(this.velocity, this.maxspeed);
-  this.position = add(this.position, this.velocity);
+  this.velocity.limit(this.maxspeed);
+  this.position.add(this.velocity);
 
   // Reset accelertion to 0 each cycle
-  this.acceleration = mult(this.acceleration, 0);
+  this.acceleration.set(0, 0, 0);
 }
 
 
 // A method that calculates and applies a steering force towards a target
-// STEER = DESIRED MINUS VELOCITY
 Boid.prototype.seek = function(target) {
-  let desired = sub(target,this.position);  // A vector pointing from the location to the target
-  // Normalize desired and scale to maximum speed
-  desired = normalize(desired);
-  desired = mult(desired, this.maxspeed);
-  // Steering = Desired minus Velocity
-  let steer = sub(desired,this.velocity);
-  let steer2 = limit(steer, this.maxforce);  // Limit to maximum steering force
-  return steer2;
-}
+  return target
+    .clone()
+    .sub(this.position) // A vector pointing from the location to the target
+    .normalize()
+    .multiplyScalar(this.maxspeed) // Normalize desired and scale to maximum speed
+    .sub(this.velocity) // Steering = Desired minus Velocity
+    .limit(this.maxforce); // Limit to maximum steering force
+};
+
 
 Boid.prototype.render = function() {
   // Draw a triangle rotated in the direction of velocity
@@ -196,33 +196,36 @@ Boid.prototype.borders = function() {
 // Method checks for nearby boids and steers away
 Boid.prototype.separate = function(boids) {
   let desiredseparation = 25.0;
-  let steer = createVector(0, 0, 0);
+  let steer = new THREE.Vector3(0, 0, 0);
   let count = 0;
   // For every boid in the system, check if it's too close
   for (let i = 0; i < boids.length; i++) {
-    let d = dist(this.position,boids[i].position);
+    let d = this.position.distanceTo(boids[i].position);
     // If the distance is greater than 0 and less than an arbitrary amount (0 when you are yourself)
     if ((d > 0) && (d < desiredseparation)) {
       // Calculate vector pointing away from neighbor
-      let diff = sub(this.position, boids[i].position);
-      diff = normalize(diff);
-      diff = div(diff, d);        // Weight by distance
-      steer = add(steer, diff);
+      let diff = this.position
+        .clone()
+        .sub(boids[i].position)
+        .normalize()
+        .divideScalar(d);
+      steer.add(diff);
       count++;            // Keep track of how many
     }
   }
   // Average -- divide by how many
   if (count > 0) {
-    steer = div(steer, count);
+    steer.divideScalar(count);
   }
 
   // As long as the vector is greater than 0
-  if (mag(steer) > 0) {
+  if (steer.length() > 0) {
     // Implement Reynolds: Steering = Desired - Velocity
-    steer = normalize(steer);
-    steer = mult(steer, this.maxspeed);
-    steer = sub(steer, this.velocity);
-    steer = limit(steer, this.maxforce);
+    steer
+      .normalize()
+      .multiplyScalar(this.maxspeed)
+      .sub(this.velocity)
+      .limit(this.maxforce);
   }
   return steer;
 }
@@ -232,24 +235,24 @@ Boid.prototype.separate = function(boids) {
 // For every nearby boid in the system, calculate the average velocity
 Boid.prototype.align = function(boids) {
   let neighbordist = 50;
-  let sum = createVector(0,0,0);
+  let sum = new THREE.Vector3(0,0,0);
   let count = 0;
   for (let i = 0; i < boids.length; i++) {
-    let d = dist(this.position,boids[i].position);
+    let d = this.position.distanceTo(boids[i].position);
     if ((d > 0) && (d < neighbordist)) {
-      sum = add(sum, boids[i].velocity);
+      sum.add(boids[i].velocity);
       count++;
     }
   }
   if (count > 0) {
-    let sum2 = div(sum, count);
-    let sum3 = normalize(sum2);
-    let sum4 = mult(sum3, this.maxspeed);
-    let steer = sub(sum4, this.velocity);
-    let steer2 = limit(steer, this.maxforce);
-    return steer2;
+    return sum
+      .divideScalar(count)
+      .normalize()
+      .multiplyScalar(this.maxspeed)
+      .sub(this.velocity)
+      .limit(this.maxforce)
   } else {
-    return createVector(0,0,0);
+    return new THREE.Vector3(0,0,0);
   }
 }
 
@@ -257,20 +260,20 @@ Boid.prototype.align = function(boids) {
 // Cohesion
 // For the average location (i.e. center) of all nearby boids, calculate steering vector towards that location
 Boid.prototype.cohesion = function(boids) {
-  let neighbordist = 50;
-  let sum = createVector(0,0,0);   // Start with empty vector to accumulate all locations
+  let neighbordist = 5;
+  let sum = new THREE.Vector3(0,0,0);   // Start with empty vector to accumulate all locations
   let count = 0;
   for (let i = 0; i < boids.length; i++) {
-    let d = dist(this.position,boids[i].position);
+    let d = this.position.distanceTo(boids[i].position);
     if ((d > 0) && (d < neighbordist)) {
-      sum = add(sum, boids[i].position); // Add location
+      sum.add(boids[i].position); // Add location
       count++;
     }
   }
   if (count > 0) {
-    sum = div(sum, count);
+    sum.divideScalar(count);
     return this.seek(sum);  // Steer towards the location
   } else {
-    return createVector(0, 0, 0);
+    return new THREE.Vector3(0, 0, 0);
   }
 }

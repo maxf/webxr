@@ -14,7 +14,7 @@
       <!-- Camera -->
       <a-entity id="rig"
         movement-controls
-        position="1 0 3">
+        position="1 0 10">
         <a-entity id="camera"
           camera
           position="0 1.6 0"
@@ -22,16 +22,15 @@
       </a-entity>
 
 
-
+<!--
       <a-entity position="0 0 0">
         <a-cone position=".5 0 0" rotation="0 0 -90" radius-bottom="0.1" radius-top="0" height="1" color="#FF0000"></a-cone>
         <a-cone position="0 .5 0" rotation="0 0 0" radius-bottom="0.1" radius-top="0" height="1" color="#00FF00"></a-cone>
         <a-cone position="0 0 .5" rotation="90 0 0" radius-bottom="0.1" radius-top="0" height="1" color="#0000FF"></a-cone>
       </a-entity>
-
+      -->
 
       <!-- Ocean -->
-
       <a-ocean width="50" depth="50" density="40" opacity="1" position="0 0 0"></a-ocean>
 
       <!-- Sky -->
@@ -50,7 +49,7 @@
     </a-scene>
 
     <script>
-//     Math.seedrandom('hello');
+     Math.seedrandom('hello');
 
      const rnd = (min, max) => Math.random()*(max-min) + min;
      const scene = document.getElementById('scene');
@@ -63,7 +62,7 @@
      const tick = i => {
        draw();
        message(`tick: ${i}`);
-       setTimeout(() => tick(i+1), 100);
+       setTimeout(() => tick(i+1), 10);
      };
 
      tick(1);
