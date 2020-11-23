@@ -54,8 +54,6 @@ function setup(w, h, d, numBoids) {
   flock = new Flock();
   // Add an initial set of boids into the system
   for (let i = 0; i < numBoids; i++) {
-//    const b = new Boid(0,height / 2, depth/2, 'boid-'+i);
-//    const b = new Boid(height / 2, depth/2, 0, 'boid-'+i);
     const b = new Boid(width / 2,height / 2, depth / 2, 'boid-'+i);
     flock.addBoid(b);
   }
@@ -92,33 +90,28 @@ Flock.prototype.addBoid = function(b) {
   this.boids.push(b);
 }
 
-// The Nature of Code
-// Daniel Shiffman
-// http://natureofcode.com
-
 // Boid class
-// Methods for Separation, Cohesion, Alignment added
 
 function Boid(x, y, z, id) {
   this.acceleration = createVector(0, 0, 0);
-//  this.velocity = createVector(0, random(-.01, .01), random(-.01, .01));
-//  this.velocity = createVector(random(-.01, .01), random(-.01, .01), 0);
   this.velocity = createVector(random(-.01, .01), random(-.01, .01), random(-.01, .01));
   this.position = createVector(x, y, z);
   this.r = 3.0;
   this.maxspeed = 3;    // Maximum speed
   this.maxforce = 0.5; // Maximum steering force (orig: 0.03)
   this.id = id;
+
   // create DOM node
   this.domNode = document.createElement('a-cone');
   this.domNode.setAttribute('position', `${this.position.x} ${this.position.y} ${this.position.z}`);
   this.domNode.setAttribute('height', 0.1);
   this.domNode.setAttribute('radius-bottom', 0.03);
   this.domNode.setAttribute('radius-top', 0);
-  this.domNode.setAttribute('color', randomColour()); //'#4cd93c');
+  this.domNode.setAttribute('color', randomColour());
   this.domNode.setAttribute('id', this.id);
   scene.appendChild(this.domNode);
 }
+
 
 Boid.prototype.run = function(boids) {
   this.flock(boids);
@@ -127,10 +120,12 @@ Boid.prototype.run = function(boids) {
   this.render();
 }
 
+
 Boid.prototype.applyForce = function(force) {
   // We could add mass here if we want A = F / M
   this.acceleration = add(this.acceleration, force);
 }
+
 
 // We accumulate a new acceleration each time based on three rules
 Boid.prototype.flock = function(boids) {
@@ -141,15 +136,13 @@ Boid.prototype.flock = function(boids) {
   sep = mult(sep, 0.01);
   ali = mult(ali, 0.02);
   coh = mult(coh, 0.01);
-  // sep = mult(sep, 1.5);
-  // ali = mult(ali, 1.0);
-  // coh = mult(coh, 1.0);
+
   // Add the force vectors to acceleration
-//  console.log(sep, ali, coh);
   this.applyForce(sep);
   this.applyForce(ali);
   this.applyForce(coh);
 }
+
 
 // Method to update location
 Boid.prototype.update = function() {
@@ -162,6 +155,7 @@ Boid.prototype.update = function() {
   // Reset accelertion to 0 each cycle
   this.acceleration = mult(this.acceleration, 0);
 }
+
 
 // A method that calculates and applies a steering force towards a target
 // STEER = DESIRED MINUS VELOCITY
@@ -179,26 +173,14 @@ Boid.prototype.seek = function(target) {
 Boid.prototype.render = function() {
   // Draw a triangle rotated in the direction of velocity
   const node = document.getElementById(this.id);
-  const [ vx, vy, vz ] = [ this.velocity.x, this.velocity.y, this.velocity.z ];
   node.setAttribute('position', `${this.position.x} ${this.position.y} ${this.position.z}`);
 
-//  const thetaX = Math.atan2(vz, vy);
-//  const thetaZ = Math.atan2(vy, vx);
-
+  const [ vx, vy, vz ] = [ this.velocity.x, this.velocity.y, this.velocity.z ];
   const thetaX = Math.atan2(vz, vy);
   const thetaZ = -Math.atan2(vx, Math.sqrt(vy*vy + vz*vz));
-
-//  node.object3D.rotation.set(thetaX, 0, thetaZ);
-
-//  const eulerAngles = new THREE.Euler(thetaX, 0, thetaZ);
-//  node.object3D.rotation = eulerAngles;
-
-
-//  node.setAttribute('rotation', `${thetaX*180/Math.PI} 0 0`);
-//  node.setAttribute('rotation', `0 0 ${thetaZ*180/Math.PI - 90}`);
   node.setAttribute('rotation', `${degrees(thetaX)} 0 ${degrees(thetaZ)}`);
-
 }
+
 
 // Wraparound
 Boid.prototype.borders = function() {
@@ -245,6 +227,7 @@ Boid.prototype.separate = function(boids) {
   return steer;
 }
 
+
 // Alignment
 // For every nearby boid in the system, calculate the average velocity
 Boid.prototype.align = function(boids) {
@@ -269,6 +252,7 @@ Boid.prototype.align = function(boids) {
     return createVector(0,0,0);
   }
 }
+
 
 // Cohesion
 // For the average location (i.e. center) of all nearby boids, calculate steering vector towards that location
