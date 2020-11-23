@@ -14,18 +14,16 @@ const div = (v, a) => createVector(v.x / a, v.y / a, v.z/a);
 const add = (v1, v2) => createVector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
 const limit = (v, max) => {
   const mSq = magSq(v);
-  let x = v.x;
-  let y = v.y;
-  let z = v.z;
   if (mSq > max * max) {
-    x /= Math.sqrt(mSq) * max;
-    y /= Math.sqrt(mSq) * max;
-    z /= Math.sqrt(mSq) * max;
+    const f = Math.sqrt(mSq) * max;
+    return createVector(v.x/f, v.y/f, v.z/f);
+  } else {
+    return createVector(v.x,v.y,v.z);
   }
-  return createVector(x,y,z);
 };
 //const heading = v => Math.atan2(v.y, v.x);
 const radians = degrees => degrees * Math.PI / 180;
+const degrees = radians => radians * 180 / Math.PI;
 const normalize = v => limit(v, 1);
 
 //======================
@@ -198,7 +196,7 @@ Boid.prototype.render = function() {
 
 //  node.setAttribute('rotation', `${thetaX*180/Math.PI} 0 0`);
 //  node.setAttribute('rotation', `0 0 ${thetaZ*180/Math.PI - 90}`);
-  node.setAttribute('rotation', `${thetaX*180/Math.PI} 0 ${thetaZ*180/Math.PI}`);
+  node.setAttribute('rotation', `${degrees(thetaX)} 0 ${degrees(thetaZ)}`);
 
 }
 
