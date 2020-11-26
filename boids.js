@@ -52,7 +52,7 @@ function setup(w, h, d, numBoids) {
   flock = new Flock();
   // Add an initial set of boids into the system
   for (let i = 0; i < numBoids; i++) {
-    const b = new Boid(width / 2,height / 2, depth / 2, 'boid-'+i);
+    const b = new Boid(0, 0, 0, 'boid-'+i);
     flock.addBoid(b);
   }
 }
@@ -95,7 +95,7 @@ function Boid(x, y, z, id) {
   this.velocity = new THREE.Vector3(random(-.01, .01), random(-.01, .01), random(-.01, .01));
   this.position = new THREE.Vector3(x, y, z);
   this.r = 3.0;
-  this.maxspeed = 0.7;    // Maximum speed
+  this.maxspeed = 3;    // Maximum speed
   this.maxforce = 0.5; // Maximum steering force (orig: 0.03)
   this.id = id;
 
@@ -114,7 +114,6 @@ function Boid(x, y, z, id) {
 Boid.prototype.run = function(boids) {
   this.flock(boids);
   this.update();
-  this.borders();
   this.render();
 }
 
@@ -130,10 +129,10 @@ Boid.prototype.applyForce = function(force) {
 Boid.prototype.flock = function(boids) {
   const forces = this.computeForces(boids);
 
-  // Add the force vectors to acceleration
-  this.applyForce(forces.separation.multiplyScalar(0.01));
+  this.applyForce(forces.separation.multiplyScalar(0.0108));
   this.applyForce(forces.alignment.multiplyScalar(0.0002));
   this.applyForce(forces.cohesion.multiplyScalar(0.0105));
+  this.applyForce(forces.recenter.multiplyScalar(0.0005));
 }
 
 
@@ -173,18 +172,9 @@ Boid.prototype.render = function() {
   node.setAttribute('rotation', `${degrees(thetaX)} 0 ${degrees(thetaZ)}`);
 }
 
-
-// Wraparound
-Boid.prototype.borders = function() {
-  if (this.position.x < -this.r)  this.position.x = width + this.r;
-  if (this.position.y < -this.r)  this.position.y = height + this.r;
-  if (this.position.z < -this.r)  this.position.z = depth + this.r;
-  if (this.position.x > width + this.r) this.position.x = -this.r;
-  if (this.position.y > height + this.r) this.position.y = -this.r;
-  if (this.position.z > depth + this.r) this.position.z = -this.r;
-}
-
-
+const recenterForce = function(position, centre = new THREE.Vector3(0, 0, 0)) {
+  return centre.clone().sub(position);
+};
 
 //----------------------------------------------------------------------------
 
@@ -203,26 +193,34 @@ Boid.prototype.computeForces = function(boids) {
   // For every nearby boid in the system, calculate the average velocity
   let alignment = new THREE.Vector3(0,0,0);
 
-  const cohNeighbordist = 5, aliNeighbordist = 50, sepDesired = 25;
+  // Recenter
+  // Force to move boid back to center
+  let recenter = recenterForce(this.position);
+
+
+  const cohNeighbordistSq = 25;
+  const aliNeighbordistSq = 250;
+  const sepDesiredSq = 225;
+
   let cohCount = 0, aliCount = 0, sepCount = 0;
 
   for (let i = 0; i < boids.length; i++) {
-    const d = this.position.distanceTo(boids[i].position);
+    const d = this.position.distanceToSquared(boids[i].position);
     if (d > 0) {
-      if (d < cohNeighbordist) {
+      if (d < cohNeighbordistSq) {
         cohesion.add(boids[i].position);
         cohCount++;
       }
-      if (d < aliNeighbordist) {
+      if (d < aliNeighbordistSq) {
         alignment.add(boids[i].velocity);
         aliCount++;
       }
-      if (d < sepDesired) {
+      if (d < sepDesiredSq) {
         const diff = this.position
           .clone()
           .sub(boids[i].position)
           .normalize()
-          .divideScalar(d);
+          .divideScalar(Math.sqrt(d));
         separation.add(diff);
         sepCount++;
       }
@@ -254,5 +252,5 @@ Boid.prototype.computeForces = function(boids) {
       .limit(this.maxforce);
   }
 
-  return { cohesion, alignment, separation };
+  return { cohesion, alignment, separation, recenter };
 }
