@@ -126,22 +126,14 @@ Boid.prototype.applyForce = function(force) {
 
 
 // We accumulate a new acceleration each time based on three rules
+
 Boid.prototype.flock = function(boids) {
-  let sep = this.separate(boids);   // Separation
-  let ali = this.align(boids);      // Alignment
-  let coh = this.cohesion(boids);   // Cohesion
-
-
-
-  // Arbitrarily weight these forces
-  sep.multiplyScalar(0.01);
-  ali.multiplyScalar(0.0002);
-  coh.multiplyScalar(0.0105);
+  const forces = this.computeForces(boids);
 
   // Add the force vectors to acceleration
-  this.applyForce(sep);
-  this.applyForce(ali);
-  this.applyForce(coh);
+  this.applyForce(forces.separation.multiplyScalar(0.01));
+  this.applyForce(forces.alignment.multiplyScalar(0.0002));
+  this.applyForce(forces.cohesion.multiplyScalar(0.0105));
 }
 
 
@@ -192,88 +184,75 @@ Boid.prototype.borders = function() {
   if (this.position.z > depth + this.r) this.position.z = -this.r;
 }
 
-// Separation
-// Method checks for nearby boids and steers away
-Boid.prototype.separate = function(boids) {
-  let desiredseparation = 25.0;
-  let steer = new THREE.Vector3(0, 0, 0);
-  let count = 0;
-  // For every boid in the system, check if it's too close
+
+
+//----------------------------------------------------------------------------
+
+Boid.prototype.computeForces = function(boids) {
+
+  // Cohesion
+  // For the average location (i.e. center) of all nearby boids,
+  // calculate steering vector towards that location
+  let cohesion = new THREE.Vector3(0,0,0);
+
+  // Separation
+  // Method checks for nearby boids and steers away
+  let separation = new THREE.Vector3(0,0,0);
+
+  // Alignment
+  // For every nearby boid in the system, calculate the average velocity
+  let alignment = new THREE.Vector3(0,0,0);
+
+  const cohNeighbordist = 5, aliNeighbordist = 50, sepDesired = 25;
+  let cohCount = 0, aliCount = 0, sepCount = 0;
+
   for (let i = 0; i < boids.length; i++) {
-    let d = this.position.distanceTo(boids[i].position);
-    // If the distance is greater than 0 and less than an arbitrary amount (0 when you are yourself)
-    if ((d > 0) && (d < desiredseparation)) {
-      // Calculate vector pointing away from neighbor
-      let diff = this.position
-        .clone()
-        .sub(boids[i].position)
-        .normalize()
-        .divideScalar(d);
-      steer.add(diff);
-      count++;            // Keep track of how many
+    const d = this.position.distanceTo(boids[i].position);
+    if (d > 0) {
+      if (d < cohNeighbordist) {
+        cohesion.add(boids[i].position);
+        cohCount++;
+      }
+      if (d < aliNeighbordist) {
+        alignment.add(boids[i].velocity);
+        aliCount++;
+      }
+      if (d < sepDesired) {
+        const diff = this.position
+          .clone()
+          .sub(boids[i].position)
+          .normalize()
+          .divideScalar(d);
+        separation.add(diff);
+        sepCount++;
+      }
     }
   }
-  // Average -- divide by how many
-  if (count > 0) {
-    steer.divideScalar(count);
+
+  if (cohCount > 0) {
+    cohesion.divideScalar(cohCount);
+    cohesion = this.seek(cohesion);
   }
 
-  // As long as the vector is greater than 0
-  if (steer.length() > 0) {
-    // Implement Reynolds: Steering = Desired - Velocity
-    steer
+  if (aliCount > 0) {
+    alignment
+      .divideScalar(aliCount)
+      .normalize()
+      .multiplyScalar(this.maxspeed)
+      .sub(this.velocity)
+      .limit(this.maxforce)
+  }
+
+  if (separation.x !== 0 && separation.y !== 0 && separation.z !== 0) {
+    if (sepCount > 0) {
+      separation.divideScalar(sepCount);
+    }
+    separation
       .normalize()
       .multiplyScalar(this.maxspeed)
       .sub(this.velocity)
       .limit(this.maxforce);
   }
-  return steer;
-}
 
-
-// Alignment
-// For every nearby boid in the system, calculate the average velocity
-Boid.prototype.align = function(boids) {
-  let neighbordist = 50;
-  let sum = new THREE.Vector3(0,0,0);
-  let count = 0;
-  for (let i = 0; i < boids.length; i++) {
-    let d = this.position.distanceTo(boids[i].position);
-    if ((d > 0) && (d < neighbordist)) {
-      sum.add(boids[i].velocity);
-      count++;
-    }
-  }
-  if (count > 0) {
-    return sum
-      .divideScalar(count)
-      .normalize()
-      .multiplyScalar(this.maxspeed)
-      .sub(this.velocity)
-      .limit(this.maxforce)
-  } else {
-    return new THREE.Vector3(0,0,0);
-  }
-}
-
-
-// Cohesion
-// For the average location (i.e. center) of all nearby boids, calculate steering vector towards that location
-Boid.prototype.cohesion = function(boids) {
-  let neighbordist = 5;
-  let sum = new THREE.Vector3(0,0,0);   // Start with empty vector to accumulate all locations
-  let count = 0;
-  for (let i = 0; i < boids.length; i++) {
-    let d = this.position.distanceTo(boids[i].position);
-    if ((d > 0) && (d < neighbordist)) {
-      sum.add(boids[i].position); // Add location
-      count++;
-    }
-  }
-  if (count > 0) {
-    sum.divideScalar(count);
-    return this.seek(sum);  // Steer towards the location
-  } else {
-    return new THREE.Vector3(0, 0, 0);
-  }
+  return { cohesion, alignment, separation };
 }
