@@ -92,7 +92,7 @@ Flock.prototype.addBoid = function(b) {
 
 function Boid(x, y, z, id) {
   this.acceleration = new THREE.Vector3(0, 0, 0);
-  this.velocity = new THREE.Vector3(random(-.01, .01), random(-.01, .01), random(-.01, .01));
+  this.velocity = new THREE.Vector3(1, random(-.01, .01), random(-.01, .01));
   this.position = new THREE.Vector3(x, y, z);
   this.r = 3.0;
   this.maxspeed = 3;    // Maximum speed
