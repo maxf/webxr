@@ -92,7 +92,7 @@ Flock.prototype.addBoid = function(b) {
 
 function Boid(x, y, z, id) {
   this.acceleration = new THREE.Vector3(0, 0, 0);
-  this.velocity = new THREE.Vector3(1, random(-.01, .01), random(-.01, .01));
+  this.velocity = new THREE.Vector3(random(-.01, .01), random(-.01, .01), random(-.01, .01));
   this.position = new THREE.Vector3(x, y, z);
   this.r = 3.0;
   this.maxspeed = 3;    // Maximum speed
@@ -129,7 +129,7 @@ Boid.prototype.applyForce = function(force) {
 Boid.prototype.flock = function(boids) {
   const forces = this.computeForces(boids);
 
-  this.applyForce(forces.separation.multiplyScalar(0.0108));
+  this.applyForce(forces.separation.multiplyScalar(0.0107));
   this.applyForce(forces.alignment.multiplyScalar(0.0002));
   this.applyForce(forces.cohesion.multiplyScalar(0.0105));
   this.applyForce(forces.recenter.multiplyScalar(0.0005));
@@ -171,6 +171,7 @@ Boid.prototype.render = function() {
   const thetaZ = -Math.atan2(vx, Math.sqrt(vy*vy + vz*vz));
   node.setAttribute('rotation', `${degrees(thetaX)} 0 ${degrees(thetaZ)}`);
 }
+
 
 const recenterForce = function(position, centre = new THREE.Vector3(0, 0, 0)) {
   return centre.clone().sub(position);
