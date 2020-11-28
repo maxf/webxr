@@ -1,10 +1,10 @@
 // Adapted from https://p5js.org/examples/simulate-flocking.html
 
-// global variables: scene
-
 
 //======================
 // util
+
+const rnd = (min, max) => Math.random()*(max-min) + min;
 
 const limit = (v, max) => {
   const mSq = v.lengthSq();
@@ -107,7 +107,7 @@ function Boid(x, y, z, id) {
   this.domNode.setAttribute('radius-top', 0);
   this.domNode.setAttribute('color', randomColour());
   this.domNode.setAttribute('id', this.id);
-  scene.appendChild(this.domNode);
+  document.getElementById('scene').appendChild(this.domNode);
 }
 
 
@@ -255,3 +255,32 @@ Boid.prototype.computeForces = function(boids) {
 
   return { cohesion, alignment, separation, recenter };
 }
+
+
+
+//============================================================
+
+AFRAME.registerComponent('boids', {
+  schema: {
+    width: { type: 'number', default: 5 },
+    height: { type: 'number', default: 5 },
+    depth: { type: 'number', default: 5 },
+    numBoids: { type: 'number', default: 500 }
+  },
+
+  init: function () {
+    Math.seedrandom('hello');
+    setup(
+      this.data.width,
+      this.data.height,
+      this.data.depth,
+      this.data.numBoids
+    );
+    console.log(this.data);
+  },
+
+  tick: function (time, timeDelta) {
+    draw();
+  }
+
+});
