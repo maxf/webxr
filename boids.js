@@ -39,33 +39,6 @@ const randomColour = () => paletteColour(Math.round(Math.random()*1000));
 
 //======================
 
-
-
-let flock;
-let width, height, depth;
-
-function setup(w, h, d, numBoids) {
-  width=w;
-  height=h;
-  depth=d;
-
-  flock = new Flock();
-  // Add an initial set of boids into the system
-  for (let i = 0; i < numBoids; i++) {
-    const b = new Boid(0, 0, 0, 'boid-'+i);
-    flock.addBoid(b);
-  }
-}
-
-function draw() {
-  flock.run();
-}
-
-// Add a new boid into the System
-function mouseDragged() {
-  flock.addBoid(new Boid(mouseX, mouseY));
-}
-
 // The Nature of Code
 // Daniel Shiffman
 // http://natureofcode.com
@@ -73,28 +46,39 @@ function mouseDragged() {
 // Flock object
 // Does very little, simply manages the array of all the boids
 
-function Flock() {
-  // An array for all the boids
-  this.boids = []; // Initialize the array
+function Flock(w, h, d, numBoids, cx, cy, cz, id) {
+  this.boids = [];
+  this.width=w;
+  this.height=h;
+  this.depth=d;
+  this.numBoids = numBoids;
+  this.id = id;
+  // Add an initial set of boids into the system
+  for (let i = 0; i < numBoids; i++) {
+    const b = new Boid(cx, cy, cz, cx, cy, cz, `flock-${id}-boid-${i}`);
+    this.addBoid(b);
+  }
 }
 
-Flock.prototype.run = function() {
+Flock.prototype.draw = function() {
   for (let i = 0; i < this.boids.length; i++) {
     this.boids[i].run(this.boids);  // Passing the entire list of boids to each boid individually
   }
 }
 
+
 Flock.prototype.addBoid = function(b) {
   this.boids.push(b);
 }
 
+
 // Boid class
 
-function Boid(x, y, z, id) {
+function Boid(x, y, z, cx, cy, cz, id) {
   this.acceleration = new THREE.Vector3(0, 0, 0);
   this.velocity = new THREE.Vector3(random(-.01, .01), random(-.01, .01), random(-.01, .01));
   this.position = new THREE.Vector3(x, y, z);
-  this.r = 3.0;
+  this.centre = new THREE.Vector3(cx, cy, cz);
   this.maxspeed = 3;    // Maximum speed
   this.maxforce = 0.5; // Maximum steering force (orig: 0.03)
   this.id = id;
@@ -173,7 +157,7 @@ Boid.prototype.render = function() {
 }
 
 
-const recenterForce = function(position, centre = new THREE.Vector3(0, 0, 0)) {
+const recenterForce = function(position, centre) {
   return centre.clone().sub(position);
 };
 
@@ -196,7 +180,7 @@ Boid.prototype.computeForces = function(boids) {
 
   // Recenter
   // Force to move boid back to center
-  let recenter = recenterForce(this.position);
+  let recenter = recenterForce(this.position, this.centre);
 
 
   const cohNeighbordistSq = 25;
@@ -265,22 +249,27 @@ AFRAME.registerComponent('boids', {
     width: { type: 'number', default: 5 },
     height: { type: 'number', default: 5 },
     depth: { type: 'number', default: 5 },
-    numBoids: { type: 'number', default: 500 }
+    numBoids: { type: 'number', default: 500 },
+    cx: { type: 'number', default: 0 },
+    cy: { type: 'number', default: 0 },
+    cz: { type: 'number', default: 0 }
   },
 
   init: function () {
-    Math.seedrandom('hello');
-    setup(
+    this.data.flock = new Flock(
       this.data.width,
       this.data.height,
       this.data.depth,
-      this.data.numBoids
+      this.data.numBoids,
+      this.data.cx,
+      this.data.cy,
+      this.data.cz,
+      `f${new Date().getTime()}`
     );
-    console.log(this.data);
   },
 
   tick: function (time, timeDelta) {
-    draw();
+    this.data.flock.draw();
   }
 
 });
