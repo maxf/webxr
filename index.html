@@ -19,6 +19,10 @@
           camera
           position="0 .5 2"
           look-controls="pointerLockEnabled: true"></a-entity>
+
+        <a-entity id="left-hand" oculus-touch-controls="hand: left"></a-entity>
+        <a-entity id="right-hand" oculus-touch-controls="hand: right"></a-entity>
+
       </a-entity>
 
 <!--
@@ -43,12 +47,12 @@
       <a-text id="text"
         value="Hello, World!"
         color="#333"
-        position="1 6 4"
+        position="0 3 0"
       ></a-text>
 
-      <a-entity boids__b1="cx: 0; cy: 0; cz: 0; numBoids: 10"></a-entity>
+      <a-sphere id="pointer" position="0 0 0" radius="0.02" color="#EF2D5E"></a-sphere>
 
-      <a-entity boids__b2="cx: 1; cy: 0; cz: 0; numBoids: 154"></a-entity>
+      <a-entity boids__b1="cx: 0; cy: 0; cz: 0; numBoids: 500"></a-entity>
 
     </a-scene>
 

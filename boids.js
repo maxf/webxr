@@ -53,16 +53,17 @@ function Flock(w, h, d, numBoids, cx, cy, cz, id) {
   this.depth=d;
   this.numBoids = numBoids;
   this.id = id;
+  this.centre = new THREE.Vector3(cx, cy, cz);
   // Add an initial set of boids into the system
   for (let i = 0; i < numBoids; i++) {
-    const b = new Boid(cx, cy, cz, cx, cy, cz, `flock-${id}-boid-${i}`);
+    const b = new Boid(cx, cy, cz, `flock-${id}-boid-${i}`);
     this.addBoid(b);
   }
 }
 
 Flock.prototype.draw = function() {
   for (let i = 0; i < this.boids.length; i++) {
-    this.boids[i].run(this.boids);  // Passing the entire list of boids to each boid individually
+    this.boids[i].run(this.boids, this.centre);
   }
 }
 
@@ -74,11 +75,10 @@ Flock.prototype.addBoid = function(b) {
 
 // Boid class
 
-function Boid(x, y, z, cx, cy, cz, id) {
+function Boid(x, y, z, id) {
   this.acceleration = new THREE.Vector3(0, 0, 0);
   this.velocity = new THREE.Vector3(random(-.01, .01), random(-.01, .01), random(-.01, .01));
   this.position = new THREE.Vector3(x, y, z);
-  this.centre = new THREE.Vector3(cx, cy, cz);
   this.maxspeed = 3;    // Maximum speed
   this.maxforce = 0.5; // Maximum steering force (orig: 0.03)
   this.id = id;
@@ -86,17 +86,17 @@ function Boid(x, y, z, cx, cy, cz, id) {
   // create DOM node
   this.domNode = document.createElement('a-cone');
   this.domNode.setAttribute('position', `${this.position.x} ${this.position.y} ${this.position.z}`);
-  this.domNode.setAttribute('height', 0.1);
-  this.domNode.setAttribute('radius-bottom', 0.03);
-  this.domNode.setAttribute('radius-top', 0);
+  this.domNode.setAttribute('height', 0.2);
+  this.domNode.setAttribute('radius-bottom', 0.06);
+  this.domNode.setAttribute('radius-top', 0.01);
   this.domNode.setAttribute('color', randomColour());
   this.domNode.setAttribute('id', this.id);
   document.getElementById('scene').appendChild(this.domNode);
 }
 
 
-Boid.prototype.run = function(boids) {
-  this.flock(boids);
+Boid.prototype.run = function(boids, centre) {
+  this.flock(boids, centre);
   this.update();
   this.render();
 }
@@ -110,8 +110,8 @@ Boid.prototype.applyForce = function(force) {
 
 // We accumulate a new acceleration each time based on three rules
 
-Boid.prototype.flock = function(boids) {
-  const forces = this.computeForces(boids);
+Boid.prototype.flock = function(boids, centre) {
+  const forces = this.computeForces(boids, centre);
 
   this.applyForce(forces.separation.multiplyScalar(0.0107));
   this.applyForce(forces.alignment.multiplyScalar(0.0002));
@@ -163,7 +163,7 @@ const recenterForce = function(position, centre) {
 
 //----------------------------------------------------------------------------
 
-Boid.prototype.computeForces = function(boids) {
+Boid.prototype.computeForces = function(boids, centre) {
 
   // Cohesion
   // For the average location (i.e. center) of all nearby boids,
@@ -180,7 +180,7 @@ Boid.prototype.computeForces = function(boids) {
 
   // Recenter
   // Force to move boid back to center
-  let recenter = recenterForce(this.position, this.centre);
+  let recenter = recenterForce(this.position, centre);
 
 
   const cohNeighbordistSq = 25;
@@ -258,7 +258,6 @@ AFRAME.registerComponent('boids', {
   multiple: true,
 
   init: function () {
-    console.log('init', this.id);
     this.data.flock = new Flock(
       this.data.width,
       this.data.height,
@@ -272,7 +271,23 @@ AFRAME.registerComponent('boids', {
   },
 
   tick: function (time, timeDelta) {
+
+    const r = x => (Math.round(x * 100) / 100).toFixed(2);
+
     this.data.flock.draw();
+    const pos = document.getElementById('left-hand').getAttribute('position');
+    const sphere = document.getElementById('pointer');
+
+    const nX = 20*pos.x;
+    const nY = 10*pos.y-5;
+    const nZ = 20*pos.z;
+
+    sphere.setAttribute('position', `${nX} ${nY} ${nZ}`);
+    message(`${r(nX)},${r(nY)},${r(nZ)}`);;
+    this.data.flock.centre.x = nX;
+    this.data.flock.centre.y = nY;
+    this.data.flock.centre.z = nZ;
+
   }
 
 });
