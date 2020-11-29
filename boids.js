@@ -255,7 +255,10 @@ AFRAME.registerComponent('boids', {
     cz: { type: 'number', default: 0 }
   },
 
+  multiple: true,
+
   init: function () {
+    console.log('init', this.id);
     this.data.flock = new Flock(
       this.data.width,
       this.data.height,
@@ -264,7 +267,7 @@ AFRAME.registerComponent('boids', {
       this.data.cx,
       this.data.cy,
       this.data.cz,
-      `f${new Date().getTime()}`
+      this.id
     );
   },
 
