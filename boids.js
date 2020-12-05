@@ -79,8 +79,8 @@ function Boid(x, y, z, id) {
   this.acceleration = new THREE.Vector3(0, 0, 0);
   this.velocity = new THREE.Vector3(random(-.01, .01), random(-.01, .01), random(-.01, .01));
   this.position = new THREE.Vector3(x, y, z);
-  this.maxspeed = 3;    // Maximum speed
-  this.maxforce = 0.5; // Maximum steering force (orig: 0.03)
+  this.maxspeed = 2;    // Maximum speed
+  this.maxforce = 3; // Maximum steering force (orig: 0.03)
   this.id = id;
 
   // create DOM node
@@ -183,9 +183,9 @@ Boid.prototype.computeForces = function(boids, centre) {
   let recenter = recenterForce(this.position, centre);
 
 
-  const cohNeighbordistSq = 25;
-  const aliNeighbordistSq = 250;
-  const sepDesiredSq = 225;
+  const cohNeighbordistSq = 25000;
+  const aliNeighbordistSq = 25000;
+  const sepDesiredSq = 0.4;
 
   let cohCount = 0, aliCount = 0, sepCount = 0;
 
@@ -243,7 +243,100 @@ Boid.prototype.computeForces = function(boids, centre) {
 
 
 //============================================================
+// Computation Shaders
+//============================================================
 
+const bounds = 500;
+
+// Create the original position texture with random coordinates between 0 and 100
+function fillPositionTexture( texture ) {
+  let theArray = texture.image.data;
+
+  for ( let k = 0, kl = theArray.length; k < kl; k += 4 ) {
+    const x = Math.random() * 100 ;
+    const y = Math.random() * 100;
+    const z = Math.random() * 100;
+
+    theArray[ k + 0 ] = x;
+    theArray[ k + 1 ] = y;
+    theArray[ k + 2 ] = z;
+    theArray[ k + 3 ] = 1;
+  }
+}
+
+
+// Create the original velocity texture with random values between -5 and 5
+function fillVelocityTexture( texture ) {
+  var theArray = texture.image.data;
+
+  for ( var k = 0, kl = theArray.length; k < kl; k += 4 ) {
+    var x = Math.random() - 0.5;
+    var y = Math.random() - 0.5;
+    var z = Math.random() - 0.5;
+
+    theArray[ k + 0 ] = x * 10;
+    theArray[ k + 1 ] = y * 10;
+    theArray[ k + 2 ] = z * 10;
+    theArray[ k + 3 ] = 1;
+  }
+}
+
+
+// Initialise the 2 shaders we use for computation (and not rendering)
+// arguments:
+// - nbBoidsSqRt: the size of the square textures used to do computations
+//   one texture for boid position, one for boid velocity.
+//   Hence the number of boids is nbBoidsSqRt squared.
+// - renderer: the webgl renderer. Not used other than to test for GLSL extensions
+function initComputeRenderer(nbBoidsSqRt, webGLRenderer) {
+  const computeRenderer = new GPUComputationRenderer( nbBoidsSqRt, nbBoidsSqRt, webGLRenderer );
+
+  // create the position and velocity matrices as textures
+  const positionTexture = computeRenderer.createTexture();
+  const velocityTexture = computeRenderer.createTexture();
+  fillPositionTexture(positionTexture);
+  fillVelocityTexture(velocityTexture);
+
+  // add them to be accessible to the 2 shaders code
+  const positionShaderCode = document.getElementById('BoidPositionFragmentShader').textContent;
+  const velocityShaderCode = document.getElementById('BoidVelocityFragmentShader').textContent;
+  positionVariable = computeRenderer.addVariable('PositionTexture', positionShaderCode, positionTexture);
+  velocityVariable = computeRenderer.addVariable('VelocityTexture', velocityShaderCode, velocityTexture);
+  computeRenderer.setVariableDependencies(velocityVariable, [ positionVariable, velocityVariable ]);
+  computeRenderer.setVariableDependencies(positionVariable, [ positionVariable, velocityVariable ]);
+
+  // uniforms
+  // (global  variables  whose  values  are  the  same  across  theentire primitive being processed)
+  uniformPosition = positionVariable.material.uniforms;
+  uniformVelocity = velocityVariable.material.uniforms;
+  uniformPosition.clock = { value: 0.0 };
+  uniformPosition.del_change = { value: 0.0 };
+
+  uniformVelocity.clock = { value: 1.0 };
+  uniformVelocity.del_change = { value: 0.0 };
+  uniformVelocity.testing = { value: 1.0 };
+  uniformVelocity.seperation_distance = { value: 1.0 };
+  uniformVelocity.alignment_distance = { value: 1.0 };
+  uniformVelocity.cohesion_distance = { value: 1.0 };
+  uniformVelocity.freedom_distance = { value: 1.0 };
+  uniformVelocity.predator = { value: new THREE.Vector3() };
+
+  // variables
+  velocityVariable.material.defines.bounds = bounds.toFixed( 2 );
+  velocityVariable.wrapS = THREE.RepeatWrapping;
+  velocityVariable.wrapT = THREE.RepeatWrapping;
+
+  positionVariable.wrapS = THREE.RepeatWrapping;
+  positionVariable.wrapT = THREE.RepeatWrapping;
+
+  var error = computeRenderer.init();
+  if ( error !== null ) {
+    console.error( error );
+  }
+  return computeRenderer;
+}
+
+//===============================
 AFRAME.registerComponent('boids', {
   schema: {
     width: { type: 'number', default: 5 },
@@ -258,6 +351,10 @@ AFRAME.registerComponent('boids', {
   multiple: true,
 
   init: function () {
+    const webGLRenderer = document.querySelector('a-scene').renderer;
+
+//    this.computeRenderer = initComputeRenderer(128, webGLRenderer);
+
     this.data.flock = new Flock(
       this.data.width,
       this.data.height,
@@ -279,14 +376,19 @@ AFRAME.registerComponent('boids', {
     const sphere = document.getElementById('pointer');
 
     const nX = 20*pos.x;
-    const nY = 10*pos.y-5;
+    const nY = 10*pos.y-2;
     const nZ = 20*pos.z;
 
     sphere.setAttribute('position', `${nX} ${nY} ${nZ}`);
-    message(`${r(nX)},${r(nY)},${r(nZ)}`);;
+//    message(`${r(nX)},${r(nY)},${r(nZ)}`);;
     this.data.flock.centre.x = nX;
     this.data.flock.centre.y = nY;
     this.data.flock.centre.z = nZ;
+
+//    this.computeRenderer.compute();
+
+//    uniform_bird.PositionTexture.value = gpu_allocation.getCurrentRenderTarget( position_variable ).texture;
+//    uniform_bird.VeloctiyTexture.value = gpu_allocation.getCurrentRenderTarget( velocity_variable ).texture;
 
   }
 
